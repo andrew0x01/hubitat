@@ -2,6 +2,7 @@
 *  Copyright 2019 Andrew Filby
 *
 *  Contributors:
+*		https://github.com/molobrakos/volvooncall	Python implemention of Volvo On Call
 *
 *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License. You may obtain a copy of the License at:
@@ -16,9 +17,13 @@
 *
 *  Author: Andrew Filby
 *
-*  Date: 2019-02-13
+*  Date: 2019-02-18
 *
-* features:
+*  Features:
+*   - Provides an implementation of the Volvo On Call facilities for Hubitat
+*   - Car attributes
+*   - Location for presence
+*   - Lock, Unlock, Preclimatization, Blink Lights, Sound Horn
 *
 ***********************************************************************************************************************/
 
@@ -27,7 +32,7 @@ public static String version()      {  return "v1.0.0"  }
 /***********************************************************************************************************************
 *
 * Version: 1.0.0
-*   13/2/2019: initial release.
+*   18/2/2019: initial release.
 *
 */
 
@@ -157,6 +162,7 @@ def configure() {
 
 def updated()   {
 	log "updated()"
+	poll()
 	unschedule()
 	if (autoPoll == "Yes") {
 		if (pollEvery == "1") {
@@ -207,7 +213,7 @@ def postVOC(command) {
 	
 	log.info "${device.displayName} executing ${command} command"
 	
-// Get the position as it is required for some of the commands
+// Get the car position as it is required for some of the commands
 	
 	def pos = [:]
 	def posParams = getURL("position?client_longitude=-00.00&client_precision=5.000000&client_latitude=00.000")
@@ -217,14 +223,13 @@ def postVOC(command) {
 			else                log.error "http call for position api did not return data: ${resp1}";
 		}
 	} catch (e) { log.error "httpGet call failed for VOC api: ${e}" }
+
 	if (!pos)   {
 		log.warn "No response from VOC API"
 		return
 	}
 	
     def obs = [:]
-//	def params = getURL(command)
-
 	def params = [
 		uri: getURI(command),
 		headers:["authorization": authHeader(),
@@ -234,8 +239,10 @@ def postVOC(command) {
 				"X-OS-Version": "22",
 				"Content-Type": "application/json"
 				],
-		body: """{"clientAccuracy": 0, "clientLatitude": ${pos.position.latitude},"clientLongitude": ${pos.position.longitude}} """
+		body: """{"clientAccuracy":0,"clientLatitude":${pos.position.latitude},"clientLongitude":${pos.position.longitude}}"""
 		]
+	
+	log params
 	
 	try {
         httpPost(params)		{ resp ->
@@ -254,27 +261,28 @@ def postVOC(command) {
 		log.warn "Failed to execute ${command}, status = ${obs.status}"
 		return
 	}
-
-	def service_url = obs.service
-	params = getURL(service_url)
 	
-	try {
-        httpGet(params)		{ resp ->
-            if (resp?.data)     obs << resp.data;
-			else                log.error "http call for VOC api did not return data: ${resp}";
-        }
-	} catch (e) { log.error "httpGet call failed for VOC api command ${command}: ${e}" }
+// Use the service URL to obtain the status, this is unnecessary
+//	def service_url = obs.service
+//	params = getURL(service_url)
+	
+//	try {
+//		httpGet(params)		{ resp ->
+//		if (resp?.data)     obs << resp.data;
+//			else                log.error "http call for VOC api did not return data: ${resp}";
+//		}
+//	} catch (e) { log.error "httpGet call failed for VOC api command ${command}: ${e}" }
 
-    if (!obs)   {
-        log.warn "No response from VOC API"
-		return
-	}
-	log obs
+//	if (!obs)   {
+//		log.warn "No response from VOC API"
+//		return
+//	}
+//	log obs
 
-	if (obs.status != "Started" && obs.status != "Successful" && obs.status != "MessageDelivered") {
-		log.warn "Message ${command} not delivered, status = ${obs.status}"
-		return
-	}
+//	if (obs.status != "Started" && obs.status != "Successful" && obs.status != "MessageDelivered") {
+//		log.warn "Message ${command} not delivered, status = ${obs.status}"
+//		return
+//	}
 	log.info "${device.displayName} ${command} command status : ${obs.status}"
 	
 }
