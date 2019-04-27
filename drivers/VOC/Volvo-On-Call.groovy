@@ -27,12 +27,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v1.0.0"  }
+public static String version()      {  return "v1.0.1"  }
 
 /***********************************************************************************************************************
 *
 * Version: 1.0.0
 *   18/2/2019: initial release.
+*
+* Version: 1.0.1
+*   27/4/2019: Updated for vehicles without hvBattery and added GPS attributes suggested by chrbratt
 *
 */
 
@@ -86,6 +89,9 @@ metadata    {
 		attribute "latitude", "number"
 		attribute "speed", "number"
 		attribute "heading", "string"
+		attribute "positions", "number"
+		attribute "GMaps Link", "string"
+
 		
         command "refresh"
         command "lock"
@@ -358,13 +364,17 @@ private getVOCdata() {
 	sendEvent(name: "engineRunning", value: obs.engineRunning, displayed: true)
 	sendEvent(name: "fuelAmount", value: obs.fuelAmount, displayed: true)
 	sendEvent(name: "fuelAmountLevel", value: obs.fuelAmountLevel, displayed: true)
-	sendEvent(name: "hvBatteryChargeStatusDerived", value: obs.hvBattery.hvBatteryChargeStatusDerived, displayed: true)
-	sendEvent(name: "hvBatteryChargeModeStatus", value: obs.hvBattery.hvBatteryChargeModeStatus, displayed: true)
-	sendEvent(name: "hvBatteryChargeStatus", value: obs.hvBattery.hvBatteryChargeStatus, displayed: true)
-	sendEvent(name: "hvBatteryLevel", value: obs.hvBattery.hvBatteryLevel, displayed: true)
-	sendEvent(name: "distanceToHVBatteryEmpty", value: obs.hvBattery.distanceToHVBatteryEmpty, displayed: true)
-	sendEvent(name: "hvBatteryChargeWarning", value: obs.hvBattery.hvBatteryChargeWarning, displayed: true)
-	sendEvent(name: "timeToHVBatteryFullyCharged", value: obs.hvBattery.timeToHVBatteryFullyCharged, displayed: true)
+	
+	if (obs.hvBattery) {
+		sendEvent(name: "hvBatteryChargeStatusDerived", value: obs.hvBattery.hvBatteryChargeStatusDerived, displayed: true)
+		sendEvent(name: "hvBatteryChargeModeStatus", value: obs.hvBattery.hvBatteryChargeModeStatus, displayed: true)
+		sendEvent(name: "hvBatteryChargeStatus", value: obs.hvBattery.hvBatteryChargeStatus, displayed: true)
+		sendEvent(name: "hvBatteryLevel", value: obs.hvBattery.hvBatteryLevel, displayed: true)
+		sendEvent(name: "distanceToHVBatteryEmpty", value: obs.hvBattery.distanceToHVBatteryEmpty, displayed: true)
+		sendEvent(name: "hvBatteryChargeWarning", value: obs.hvBattery.hvBatteryChargeWarning, displayed: true)
+		sendEvent(name: "timeToHVBatteryFullyCharged", value: obs.hvBattery.timeToHVBatteryFullyCharged, displayed: true)
+	}
+	
 	sendEvent(name: "odometer", value: obs.odometer, displayed: true)
 	sendEvent(name: "remoteClimatizationStatus", value: obs.remoteClimatizationStatus, displayed: true)
 	sendEvent(name: "serviceWarningStatus", value: obs.serviceWarningStatus, displayed: true)
@@ -424,6 +434,16 @@ private getPosition() {
 		log "presence not detected"
 		sendEvent(name: "presence", value: "not present", displayed: true)
 	}
+	
+	// Code suggested by chrbratt
+
+//	log.info "${obs.position.latitude}, ${obs.position.longitude}"
+//	log.info "<a href=\"https://www.google.com/maps/search/?api=1&query=${obs.position.latitude},${obs.position.longitude}\" target=\"_blank\">${obs.position.latitude},${obs.position.longitude}</a>"
+
+	def sendThis = "${obs.position.latitude}, ${obs.position.longitude}"
+	def sendThis2 = "<a href=\"https://www.google.com/maps/search/?api=1&query=${obs.position.latitude},${obs.position.longitude}\" target=\"_blank\">${obs.position.latitude},${obs.position.longitude}</a>"
+	sendEvent(name: "positions", value: sendThis, displayed: true)
+	sendEvent(name: "GMaps Link", value: sendThis2, displayed: true)
 	
     return obs
 }
